@@ -14,6 +14,7 @@ class Config:
     slippage: float = 0.0005   # 0.05% per side
     data_source: str = "yahoo"
     output_dir: Path = Path("outputs")
+    local_data_dir: Path | None = Path("sample_data")
 
 
 config = Config()
