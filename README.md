@@ -14,12 +14,15 @@ A simple swing trading backtester that downloads market data with **yfinance**, 
    ```
 3. Customize the run:
    ```bash
-   python run.py --symbol MSFT --start 2021-01-01 --end 2023-01-01 --short 5 --long 20 --capital 15000
+   python run.py --symbol MSFT --start 2021-01-01 --end 2023-01-01 --short 10 --long 40 --capital 15000
    ```
 
 ## What happens
 - Data is downloaded from Yahoo Finance.
-- Signals use a short/long simple moving average crossover on the **Close** column.
+- Signals implement a **pullback-in-trend** approach on the **Close** column:
+  - Define the prevailing trend with a long simple moving average (default 50 days) that must be rising and below price.
+  - Wait for price to dip under the short moving average (default 20 days) and then reclaim it to signal a pullback recovery.
+  - Stay long while the uptrend filter holds; exit when price slips under the long average.
 - Orders triggered by a signal are placed at the **next day Open**.
 - Per-side costs applied to every trade: 0.01% commission + 0.05% slippage.
 - Position sizing: the backtest buys as many whole shares as possible with available cash and exits to cash when the signal turns flat.
@@ -31,10 +34,22 @@ Files are written to the `outputs/` folder by default:
 - `trades.csv` – each buy/sell with executed price, shares, and cash balance.
 - `summary.json` – key performance metrics (returns, Sharpe, drawdown, trade stats).
 
+## Example: Pullback trend test on Coca-Cola (KO)
+
+1. Install dependencies (Python 3.11):
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Run the pullback strategy for Coca-Cola with default 20/50-day moving averages:
+   ```bash
+   python run.py --symbol KO --start 2023-01-01 --end 2024-01-01
+   ```
+3. Review the outputs in `outputs/` (equity, drawdown, trades, and summary files).
+
 ## Project files
 - `config.py` – default configuration values.
 - `data.py` – downloads price data with yfinance.
-- `strategy.py` – moving-average crossover signal generator.
+- `strategy.py` – pullback-in-trend signal generator.
 - `backtest.py` – portfolio simulation with costs and next-day execution.
 - `metrics.py` – drawdown and summary calculations.
 - `run.py` – command-line entry point wiring everything together.
