@@ -23,6 +23,15 @@ def parse_args() -> argparse.Namespace:
         "--capital", type=float, default=default_config.initial_capital, help="Starting capital in USD"
     )
     parser.add_argument(
+        "--use-cache",
+        choices=["on", "refresh", "off"],
+        default=default_config.use_cache,
+        help=(
+            "Price data caching: 'on' uses cache when available, 'refresh' overwrites cache, "
+            "'off' always downloads without reading cache."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         default=str(default_config.output_dir),
         help="Directory to store output files (equity.csv, drawdown.csv, trades.csv, summary.json)",
@@ -41,6 +50,8 @@ def main() -> None:
         long_window=args.long,
         commission=default_config.commission,
         slippage=default_config.slippage,
+        cache_dir=default_config.cache_dir,
+        use_cache=args.use_cache,
         output_dir=Path(args.output_dir),
     )
 

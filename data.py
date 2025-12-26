@@ -26,13 +26,31 @@ def fetch_price_data(config: Config) -> pd.DataFrame:
         Price data indexed by date with OHLC columns.
     """
 
+    config.cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = _cache_path(config)
+
+    if config.use_cache == "on" and cache_path.exists():
+        print(f"Loading cached data from {cache_path}")
+        cached = _load_cache(cache_path)
+        prepared_cached = _prepare_data(cached, config)
+        if not prepared_cached.empty:
+            return prepared_cached
+
     df = _download_with_retry(config)
 
     if df.empty:
-        df = _load_local_fallback(config)
+        if cache_path.exists():
+            print(f"Download failed, loading cached data from {cache_path}")
+            df = _load_cache(cache_path)
+        else:
+            df = _load_local_fallback(config)
+    else:
+        df = _prepare_data(df, config)
+        if config.use_cache in {"on", "refresh"}:
+            _save_cache(df, cache_path)
 
-    df = df.rename(columns=str.title)
-    df = df.dropna()
+    if not df.empty:
+        df = _prepare_data(df, config)
 
     if df.empty:
         raise ValueError(
@@ -54,6 +72,7 @@ def _download_with_retry(config: Config) -> pd.DataFrame:
                 config.symbol,
                 start=config.start,
                 end=config.end,
+                interval=config.interval,
                 progress=False,
                 auto_adjust=False,
                 threads=False,
@@ -69,6 +88,33 @@ def _download_with_retry(config: Config) -> pd.DataFrame:
     if last_exception:
         print(f"Data download failed after {attempts} attempts: {last_exception}")
     return pd.DataFrame()
+
+
+def _prepare_data(df: pd.DataFrame, config: Config) -> pd.DataFrame:
+    """Flatten columns, clean, and validate price data."""
+
+    if isinstance(df.columns, pd.MultiIndex):
+        if config.symbol in df.columns.get_level_values(-1):
+            df = df.xs(config.symbol, level=-1, axis=1)
+        else:
+            df.columns = ["_".join(map(str, col)).strip("_") for col in df.columns]
+
+    df = df.rename(columns=str.title)
+    df = df.dropna()
+    return df
+
+
+def _cache_path(config: Config) -> Path:
+    key = f"{config.symbol}_{config.start}_{config.end}_{config.interval}.csv"
+    return config.cache_dir / key
+
+
+def _load_cache(path: Path) -> pd.DataFrame:
+    return pd.read_csv(path, parse_dates=["Date"], index_col="Date")
+
+
+def _save_cache(df: pd.DataFrame, path: Path) -> None:
+    df.to_csv(path, index_label="Date")
 
 
 def _load_local_fallback(config: Config) -> pd.DataFrame:
