@@ -31,7 +31,11 @@ def generate_signals(data: pd.DataFrame, config: Config) -> pd.DataFrame:
         describe the trend and pullback recovery states.
     """
 
-    close = pd.to_numeric(data["Close"], errors="coerce")
+    if "Close" not in data:
+        raise KeyError("Input data must contain a 'Close' column")
+
+    close_series = pd.Series(data["Close"], index=data.index)
+    close = pd.to_numeric(close_series, errors="coerce")
 
     signals = pd.DataFrame(index=data.index)
     signals["short_ma"] = close.rolling(window=config.short_window).mean()
