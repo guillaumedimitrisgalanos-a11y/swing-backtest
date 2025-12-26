@@ -17,6 +17,19 @@ A simple swing trading backtester that downloads market data with **yfinance**, 
    python run.py --symbol MSFT --start 2021-01-01 --end 2023-01-01 --short 10 --long 40 --capital 15000
    ```
 
+## Caching price data
+- Price downloads are cached in `data_cache/` using the symbol, start date, end date, and interval in the filename.
+- Control caching with `--use-cache` (default `on`):
+  - `on`: use cache when available, otherwise download and save
+  - `refresh`: always download and overwrite cache
+  - `off`: always download without reading cache
+
+Examples:
+```bash
+python run.py --symbol KO --start 2010-01-01 --end 2024-01-01 --use-cache on
+python run.py --symbol KO --start 2010-01-01 --end 2024-01-01 --use-cache refresh
+```
+
 ## What happens
 - Data is downloaded from Yahoo Finance.
 - Signals implement a **pullback-in-trend** approach on the **Close** column:
