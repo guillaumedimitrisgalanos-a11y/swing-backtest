@@ -31,16 +31,18 @@ def generate_signals(data: pd.DataFrame, config: Config) -> pd.DataFrame:
         describe the trend and pullback recovery states.
     """
 
+    close = pd.to_numeric(data["Close"], errors="coerce")
+
     signals = pd.DataFrame(index=data.index)
-    signals["short_ma"] = data["Close"].rolling(window=config.short_window).mean()
-    signals["long_ma"] = data["Close"].rolling(window=config.long_window).mean()
+    signals["short_ma"] = close.rolling(window=config.short_window).mean()
+    signals["long_ma"] = close.rolling(window=config.long_window).mean()
 
     long_ma_rising = signals["long_ma"] > signals["long_ma"].shift(1)
-    price_above_long = data["Close"] > signals["long_ma"]
+    price_above_long = close > signals["long_ma"]
     trend_up = (long_ma_rising & price_above_long).fillna(False)
 
-    pulled_back_yesterday = data["Close"].shift(1) < signals["short_ma"].shift(1)
-    reclaimed_short_ma = data["Close"] >= signals["short_ma"]
+    pulled_back_yesterday = close.shift(1) < signals["short_ma"].shift(1)
+    reclaimed_short_ma = close >= signals["short_ma"]
     pullback_recovery = (pulled_back_yesterday & reclaimed_short_ma).fillna(False)
 
     signals["trend_up"] = trend_up
@@ -60,7 +62,7 @@ def generate_signals(data: pd.DataFrame, config: Config) -> pd.DataFrame:
         elif in_position:
             # Exit when the uptrend filter fails or price falls under the
             # long-term average.
-            if (not trend_up.iat[i]) or data["Close"].iat[i] < signals["long_ma"].iat[i]:
+            if (not trend_up.iat[i]) or close.iat[i] < signals["long_ma"].iat[i]:
                 in_position = False
 
         signal_values.append(1 if in_position else 0)
